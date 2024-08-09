@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gopcua/opcua"
@@ -34,7 +35,7 @@ func main() {
 
 	// add an arbitrary timeout to demonstrate how to stop a subscription
 	// with a context.
-	d := 60 * time.Second
+	d := 60 * time.Minute
 	ctx, cancel := context.WithTimeout(context.Background(), d)
 	defer cancel()
 	log.Printf("Subscription will stop after %s for demonstration purposes", d)
@@ -99,6 +100,7 @@ func main() {
 
 	// read from subscription's notification channel until ctx is cancelled
 	for {
+		fmt.Println("-------------------------------------------------------------------------------")
 		select {
 		case <-ctx.Done():
 			return
@@ -119,7 +121,14 @@ func main() {
 				for _, item := range x.Events {
 					log.Printf("Event for client handle: %v\n", item.ClientHandle)
 					for i, field := range item.EventFields {
-						log.Printf("%v: %v of Type: %T", eventFieldNames[i], field.Value(), field.Value())
+						if eventFieldNames[i] == "EventId" {
+							if arrayValue, ok := field.Value().([]uint8); ok {
+								log.Printf(strings.Join(ToBinaryStrings(arrayValue), " "))
+								log.Printf("%v: %v of Type: %T", eventFieldNames[i], field.Value(), field.Value())
+							}
+						} else {
+							log.Printf("%v: %v of Type: %T", eventFieldNames[i], field.Value(), field.Value())
+						}
 					}
 					log.Println()
 				}
@@ -137,7 +146,7 @@ func valueRequest(nodeID *ua.NodeID) *ua.MonitoredItemCreateRequest {
 }
 
 func eventRequest(nodeID *ua.NodeID) (*ua.MonitoredItemCreateRequest, []string) {
-	fieldNames := []string{"EventId", "EventType", "Severity", "Time", "Message"}
+	fieldNames := []string{"EventId", "EventType", "Severity", "Time", "Message", "SourceNode", "SourceName", "ConditionClassId", "ConditionClassName", "ConditionName", "AckedState", "ConfirmedState", "ActiveState"}
 	selects := make([]*ua.SimpleAttributeOperand, len(fieldNames))
 
 	for i, name := range fieldNames {
@@ -209,4 +218,12 @@ func eventRequest(nodeID *ua.NodeID) (*ua.MonitoredItemCreateRequest, []string) 
 	}
 
 	return req, fieldNames
+}
+
+func ToBinaryStrings(array []uint8) []string {
+	var result []string
+	for _, b := range array {
+		result = append(result, fmt.Sprintf("%08b", b))
+	}
+	return result
 }
