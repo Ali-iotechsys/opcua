@@ -104,13 +104,13 @@ func main() {
 		select {
 		case <-ctx.Done():
 			return
-		case res := <-notifyCh:
-			if res.Error != nil {
-				log.Print(res.Error)
+		case result := <-notifyCh:
+			if result.Error != nil {
+				log.Print(result.Error)
 				continue
 			}
 
-			switch x := res.Value.(type) {
+			switch x := result.Value.(type) {
 			case *ua.DataChangeNotification:
 				for _, item := range x.MonitoredItems {
 					data := item.Value.Value.Value()
@@ -134,7 +134,7 @@ func main() {
 				}
 
 			default:
-				log.Printf("what's this publish result? %T", res.Value)
+				log.Printf("what's this publish result? %T", result.Value)
 			}
 		}
 	}
